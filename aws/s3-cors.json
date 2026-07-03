@@ -1,0 +1,9 @@
+[
+  {
+    "AllowedOrigins": ["https://YOUR_APP_DOMAIN", "http://localhost:3000", "http://127.0.0.1:3000"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
