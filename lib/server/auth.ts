@@ -93,7 +93,8 @@ export async function isAdmin(email: string): Promise<boolean> {
       .where(eq(users.email, email.toLowerCase()))
       .limit(1);
     return rows[0]?.role === "admin";
-  } catch {
+  } catch (err) {
+    console.error("[auth] isAdmin query failed:", err);
     return false; // db unreachable — fall back to allowlist only
   }
 }
