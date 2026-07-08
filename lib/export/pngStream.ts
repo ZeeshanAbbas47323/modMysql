@@ -1,5 +1,6 @@
 import pako from "pako";
 import { SHEET_WIDTH_IN } from "../presets";
+import { physChunk } from "./pngDpi";
 import { elementAABB } from "../units";
 import {
   drawElement,
@@ -193,6 +194,7 @@ export async function exportLargePng(
   const png = concat([
     signature,
     ihdr(width, height),
+    physChunk(dpi), // print resolution metadata — readers assume 96 DPI without it
     chunk("IDAT", deflate.result as Uint8Array),
     chunk("IEND", new Uint8Array(0)),
   ]);

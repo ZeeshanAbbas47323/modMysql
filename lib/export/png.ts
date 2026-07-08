@@ -1,4 +1,5 @@
 import { SHEET_WIDTH_IN } from "../presets";
+import { setPngBlobDpi } from "./pngDpi";
 import { exportLargePng } from "./pngStream";
 import {
   outputPixelSize,
@@ -46,6 +47,9 @@ export async function exportPng(
       "Lower the export DPI."
     );
   }
+  // Browser encoders omit the pHYs chunk (readers then assume 96 DPI) —
+  // stamp the real print resolution into the metadata.
+  const withDpi = await setPngBlobDpi(blob, dpi);
   onProgress?.("encoding", 100);
-  return blob;
+  return withDpi;
 }

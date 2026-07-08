@@ -309,6 +309,29 @@ export default function ExportModal() {
             </div>
           </div>
 
+          {/* export-ready validation: physical size → pixels → DPI per sheet */}
+          {!sizeError && (
+            <div className="space-y-1 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-3 text-xs">
+              <span className="block font-semibold uppercase tracking-wide text-emerald-300">
+                Export ready
+              </span>
+              {sheets.map((sh, i) => {
+                const p = outputPixelSize(sh.config.widthIn, sh.config.heightIn, dpi);
+                return (
+                  <div key={sh.id ?? i} className="flex justify-between text-emerald-100/90 tabular-nums">
+                    <span>
+                      {sheetCount > 1 ? `Sheet ${i + 1}: ` : ""}
+                      {sh.config.widthIn}″ × {sh.config.heightIn}″
+                    </span>
+                    <span>
+                      {p.width} × {p.height} px · {dpi} DPI
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* quality checks */}
           {(issues.length > 0 || sizeError) && (
             <div className="space-y-1.5">
