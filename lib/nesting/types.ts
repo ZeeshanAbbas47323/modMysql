@@ -59,6 +59,14 @@ export interface PackingStrategy {
 export type ArrangeMode = "compact" | "grid" | "rows" | "production";
 export type OptimizationMode = "fast" | "balanced" | "maximum";
 
+/**
+ * Orientation policy for placement:
+ * - "smart": try horizontal (landscape) first; switch every item to vertical
+ *   only when it packs meaningfully denser (see VERTICAL_GAIN_THRESHOLD).
+ * - "horizontal" / "vertical": force that orientation.
+ */
+export type PlacementOrientation = "smart" | "horizontal" | "vertical";
+
 export interface NestOptions {
   mode: ArrangeMode;
   optimization: OptimizationMode;
@@ -70,6 +78,11 @@ export interface NestOptions {
   allowScale: boolean;
   /** 0..1 — lowest uniform scale auto-scaling may apply. */
   minScale: number;
+  /**
+   * Orientation policy. Defaults to "smart". Only takes effect when
+   * allowRotation is true — without rotation, items keep their orientation.
+   */
+  orientation?: PlacementOrientation;
 }
 
 export interface NestStats {
@@ -83,6 +96,8 @@ export interface NestStats {
   scale: number;
   durationMs: number;
   strategy: string;
+  /** Orientation the pack settled on ("mixed" when rotation is disabled). */
+  orientation?: "horizontal" | "vertical" | "mixed";
 }
 
 export interface NestResult {

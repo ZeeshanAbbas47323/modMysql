@@ -27,6 +27,7 @@ function nestOptions(margin = 0): NestOptions {
     mode: "compact",
     optimization: "balanced",
     allowRotation: true,
+    orientation: "smart",
     spacing: PLACE_SPACING_IN,
     margin,
     allowScale: false,

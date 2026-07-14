@@ -1,5 +1,11 @@
 import { GuillotineStrategy } from "./guillotine";
 import { MaxRectsStrategy } from "./maxrects";
+import {
+  fixupRotation,
+  orientItems,
+  verticalWins,
+  type OrientationTarget,
+} from "./orientation";
 import { GridStrategy, RowStrategy } from "./rows";
 import { SkylineStrategy } from "./skyline";
 import type {
@@ -113,6 +119,56 @@ function runAttempts(
   return best!;
 }
 
+interface OrientedRun {
+  result: PackedResult;
+  strategy: string;
+  orientation: "horizontal" | "vertical" | "mixed";
+}
+
+/**
+ * Orientation-aware packing. Horizontal (landscape) is the preferred layout:
+ * every pass first normalizes items to landscape; a portrait-first pass only
+ * replaces it when it fits more items or is significantly denser
+ * (VERTICAL_GAIN_THRESHOLD). A single remaining item is always landscape.
+ * When rotation is disallowed, items keep their orientation ("mixed").
+ */
+function runOriented(
+  items: NestItem[],
+  bin: BinConfig,
+  attempts: Attempt[],
+  orientation: "smart" | "horizontal" | "vertical"
+): OrientedRun {
+  if (!bin.allowRotation) {
+    return { ...runAttempts(items, bin, attempts), orientation: "mixed" };
+  }
+  const pass = (target: OrientationTarget): OrientedRun => {
+    const o = orientItems(items, target);
+    const r = runAttempts(o.items, bin, attempts);
+    return {
+      result: fixupRotation(r.result, o.swapped),
+      strategy: r.strategy,
+      orientation: target,
+    };
+  };
+
+  if (orientation === "vertical") return pass("vertical");
+  // A single remaining image must never be stacked vertically.
+  if (orientation === "horizontal" || items.length === 1) return pass("horizontal");
+
+  const horizontal = pass("horizontal");
+  const vertical = pass("vertical");
+  if (verticalWins(horizontal.result, vertical.result, bin)) return vertical;
+  // When forcing landscape leaves overflow, fall back to per-item (mixed)
+  // orientation if that fits more — never waste space just to enforce a bias.
+  if (horizontal.result.overflow.length > 0) {
+    const mixed = runAttempts(items, bin, attempts);
+    if (mixed.result.overflow.length < horizontal.result.overflow.length) {
+      return { ...mixed, orientation: "mixed" };
+    }
+  }
+  return horizontal;
+}
+
 function packedHeight(result: PackedResult): number {
   let max = 0;
   for (const p of result.placements) max = Math.max(max, p.y + p.h);
@@ -152,14 +208,20 @@ export function runNest(request: NestRequest): NestResult {
     obstacles,
   };
   const attempts = attemptsFor(options, items.length, obstacles.length > 0);
+  const orientation = options.orientation ?? "smart";
 
-  let { result, strategy } = runAttempts(items, bin, attempts);
+  let { result, strategy, orientation: usedOrientation } = runOriented(
+    items,
+    bin,
+    attempts,
+    orientation
+  );
   let appliedScale = 1;
 
   // Auto-scale: find the largest uniform scale (>= minScale) that fits all.
   if (result.overflow.length > 0 && options.allowScale && options.minScale < 1) {
     const fitsAt = (scale: number) =>
-      runAttempts(scaleItems(items, scale), bin, attempts);
+      runOriented(scaleItems(items, scale), bin, attempts, orientation);
 
     const atMin = fitsAt(options.minScale);
     if (atMin.result.overflow.length === 0) {
@@ -181,6 +243,7 @@ export function runNest(request: NestRequest): NestResult {
       }
       result = best.result;
       strategy = best.strategy;
+      usedOrientation = best.orientation;
       appliedScale = bestScale;
     }
     // if even minScale overflows, keep the unscaled result + overflow queue
@@ -201,6 +264,7 @@ export function runNest(request: NestRequest): NestResult {
       scale: appliedScale,
       durationMs: Date.now() - start,
       strategy,
+      orientation: usedOrientation,
     },
   };
 }

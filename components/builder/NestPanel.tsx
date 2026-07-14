@@ -6,6 +6,7 @@ import type {
   ArrangeMode,
   NestOptions,
   OptimizationMode,
+  PlacementOrientation,
 } from "@/lib/nesting/types";
 import { SAFE_ZONE_IN } from "@/lib/presets";
 import { useBuilder } from "@/lib/store";
@@ -24,6 +25,12 @@ const OPTIMIZATIONS: { value: OptimizationMode; label: string }[] = [
   { value: "maximum", label: "Maximum" },
 ];
 
+const ORIENTATIONS: { value: PlacementOrientation; label: string; hint: string }[] = [
+  { value: "smart", label: "Smart", hint: "Landscape first; portrait only when it packs significantly denser" },
+  { value: "horizontal", label: "Horiz", hint: "Force landscape orientation" },
+  { value: "vertical", label: "Vert", hint: "Force portrait orientation" },
+];
+
 export default function NestPanel() {
   const elementsCount = useBuilder((s) => s.elements.length);
   const selectedCount = useBuilder((s) => s.selectedIds.length);
@@ -35,6 +42,7 @@ export default function NestPanel() {
   const [mode, setMode] = useState<ArrangeMode>("compact");
   const [optimization, setOptimization] = useState<OptimizationMode>("balanced");
   const [allowRotation, setAllowRotation] = useState(true);
+  const [orientation, setOrientation] = useState<PlacementOrientation>("smart");
   const [spacing, setSpacing] = useState(0.125);
   const [allowScale, setAllowScale] = useState(false);
   const [minScale, setMinScale] = useState(70);
@@ -43,6 +51,7 @@ export default function NestPanel() {
     mode,
     optimization: mode === "production" ? "maximum" : optimization,
     allowRotation,
+    orientation,
     spacing,
     margin: showSafeZone ? SAFE_ZONE_IN : 0,
     allowScale,
@@ -104,6 +113,37 @@ export default function NestPanel() {
           className="h-3.5 w-3.5 accent-[#4f8ef7]"
         />
       </label>
+
+      <div
+        className={`flex items-center justify-between py-1 text-xs text-gray-300 ${
+          allowRotation ? "" : "opacity-40"
+        }`}
+        title={
+          allowRotation
+            ? "How auto-nest orients artwork"
+            : "Enable 90° rotation to control placement orientation"
+        }
+      >
+        <span>Placement</span>
+        <div className="flex overflow-hidden rounded border border-surface-3">
+          {ORIENTATIONS.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              title={o.hint}
+              disabled={!allowRotation}
+              onClick={() => setOrientation(o.value)}
+              className={`px-2 py-1 text-[11px] ${
+                orientation === o.value
+                  ? "bg-accent text-white"
+                  : "text-gray-300 hover:bg-surface-3"
+              } disabled:cursor-not-allowed`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex items-center justify-between gap-2 py-1">
         <span className="text-xs text-gray-300">Spacing</span>
@@ -200,7 +240,10 @@ export default function NestPanel() {
             </div>
           )}
           <div className="flex justify-between text-gray-500">
-            <span>{stats.strategy}</span>
+            <span>
+              {stats.strategy}
+              {stats.orientation ? ` · ${stats.orientation}` : ""}
+            </span>
             <span className="tabular-nums">{stats.durationMs} ms</span>
           </div>
         </div>
